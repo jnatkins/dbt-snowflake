@@ -1,4 +1,3 @@
-
 {% macro dbt_snowflake_validate_get_incremental_strategy(config) %}
   {#-- Find and validate the incremental strategy #}
   {%- set strategy = config.get("incremental_strategy", default="merge") -%}
@@ -54,7 +53,7 @@
     {% set build_sql = create_table_as(False, target_relation, sql) %}
   
   {% else %}
-    {% do run_query(create_table_as(True, tmp_relation, sql)) %}
+    {% do run_query(create_view_as(tmp_relation, sql)) %}
     {% do adapter.expand_target_column_types(
            from_relation=tmp_relation,
            to_relation=target_relation) %}
@@ -63,7 +62,8 @@
     {% if not dest_columns %}
       {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
     {% endif %}
-    {% set build_sql = dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns) %}
+    {% set build_sql = dbt_snowflake_get_incremental_sql(strategy, "(" + sql + ")", target_relation, unique_key, dest_columns) %}
+    {{ drop_relation(load_relation(tmp_relation)) }}
   
   {% endif %}
 
